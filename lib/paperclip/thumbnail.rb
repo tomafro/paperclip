@@ -2,42 +2,55 @@ module Paperclip
   # Handles thumbnailing images that are uploaded.
   class Thumbnail
 
-    attr_accessor :file, :current_geometry, :target_geometry, :format, :whiny_thumbnails
+    attr_accessor :file
 
     # Creates a Thumbnail object set to work on the +file+ given. It
     # will attempt to transform the image into one defined by +target_geometry+
     # which is a "WxH"-style string. +format+ will be inferred from the +file+
     # unless specified. Thumbnail creation will raise no errors unless
     # +whiny_thumbnails+ is true (which it is, by default.
-    def initialize file, target_geometry, format = nil, whiny_thumbnails = true
+    def initialize file, options
       @file             = file
-      @crop             = target_geometry[-1,1] == '#'
-      @target_geometry  = Geometry.parse target_geometry
-      @current_geometry = Geometry.from_file file
-      @whiny_thumbnails = whiny_thumbnails
-
-      @current_format   = File.extname(@file.path)
-      @basename         = File.basename(@file.path, @current_format)
-      
-      @format = format
+      @options = options
+      #       @target_geometry  = target_geometry && Geometry.parse(target_geometry)
+      #       @current_geometry = file && Geometry.from_file(file)
+      # 
+      @current_format   = @file && File.extname(@file.path)
+      @basename         = @file && File.basename(@file.path, @current_format)
+      #       
+      #       @format = format
     end
 
-    # Creates a thumbnail, as specified in +initialize+, +make+s it, and returns the
-    # resulting Tempfile.
-    def self.make file, dimensions, format = nil, whiny_thumbnails = true
-      new(file, dimensions, format, whiny_thumbnails).make
+    def options
+      @options
     end
 
     # Returns true if the +target_geometry+ is meant to crop.
     def crop?
-      @crop
+      options[:dimensions][-1,1] == '#'
+    end
+
+    def extension
+      options[:format]
+    end
+    
+    def current_geometry
+      @current_geometry ||= Geometry.from_file(file)
+    end
+    
+    def whiny_thumbnails
+      !(options[:whiny_thumbnails] == false)
+    end
+    
+    def target_geometry
+      @target_geometry ||= Geometry.parse(options[:dimensions])
     end
 
     # Performs the conversion of the +file+ into a thumbnail. Returns the Tempfile
     # that contains the new image.
     def make
       src = @file
-      dst = Tempfile.new([@basename, @format].compact.join("."))
+      dst = Tempfile.new([@basename, extension.to_s].compact.join("."))
       dst.binmode
 
       command = <<-end_command
@@ -46,9 +59,10 @@ module Paperclip
         #{ transformation_command }
         "#{ File.expand_path(dst.path) }"
       end_command
+      
       success = system(command.gsub(/\s+/, " "))
 
-      if success && $?.exitstatus != 0 && @whiny_thumbnails
+      if success && $?.exitstatus != 0 && whiny_thumbnails
         raise PaperclipError, "There was an error processing this thumbnail"
       end
 
@@ -58,7 +72,7 @@ module Paperclip
     # Returns the command ImageMagick's +convert+ needs to transform the image
     # into the thumbnail.
     def transformation_command
-      scale, crop = @current_geometry.transformation_to(@target_geometry, crop?)
+      scale, crop = current_geometry.transformation_to(target_geometry, crop?)
       trans = "-scale \"#{scale}\""
       trans << " -crop \"#{crop}\" +repage" if crop
       trans

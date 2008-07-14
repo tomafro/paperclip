@@ -41,7 +41,6 @@ module Paperclip
       @validation_errors = nil
       @dirty             = false
 
-      normalize_style_definition
       initialize_storage
     end
 
@@ -127,6 +126,10 @@ module Paperclip
       instance[:"#{name}_file_name"]
     end
 
+    def original_content_type
+      instance[:"#{@name}_content_type"]
+    end
+
     # A hash of procs that are run during the interpolation of a path or url.
     # A variable of the format :name will be replaced with the return value of
     # the proc named ":name". Each lambda takes the attachment and the current
@@ -142,8 +145,10 @@ module Paperclip
                            attachment.original_filename.gsub(File.extname(attachment.original_filename), "")
                          end,
         :extension    => lambda do |attachment,style| 
-                           ((style = attachment.styles[style]) && style.last) ||
-                           File.extname(attachment.original_filename).gsub(/^\.+/, "")
+                           result = attachment.handler_for(style).extension || File.extname(attachment.original_filename).gsub(/^\.+/, "") 
+                           
+                           result.to_s
+                          
                          end,
         :id           => lambda{|attachment,style| attachment.instance.id },
         :id_partition => lambda do |attachment, style|
@@ -171,6 +176,22 @@ module Paperclip
       end
     end
 
+    def handler_for(name)
+      style = @styles[name]
+      if style.is_a?(Hash)
+        if style[:class]
+          style[:class].constantize.new(@queued_for_write[:original], style.merge(:attachment => self, :whiny_thumbnails => true))
+        else
+          Thumbnail.new(@queued_for_write[:original], style.merge(:attachment => self, :whiny_thumbnails => true))
+        end
+      else
+        dimensions, format = [style, nil].flatten[0..1]
+        format             = nil if format == ""
+        dimensions = dimensions.call(instance) if dimensions.respond_to? :call
+        Thumbnail.new(@queued_for_write[:original], :dimensions => dimensions, :format => format, :whiny_thumbnails => @whiny_thumnails)
+      end
+    end
+
     private
 
     def valid_assignment? file #:nodoc:
@@ -186,15 +207,7 @@ module Paperclip
       end
       @validation_errors
     end
-
-    def normalize_style_definition
-      @styles.each do |name, args|
-        dimensions, format = [args, nil].flatten[0..1]
-        format             = nil if format == ""
-        @styles[name]      = [dimensions, format]
-      end
-    end
-
+    
     def initialize_storage
       @storage_module = Paperclip::Storage.const_get(@storage.to_s.capitalize)
       self.extend(@storage_module)
@@ -204,12 +217,7 @@ module Paperclip
       return if @queued_for_write[:original].nil?
       @styles.each do |name, args|
         begin
-          dimensions, format = args
-          dimensions = dimensions.call(instance) if dimensions.respond_to? :call
-          @queued_for_write[name] = Thumbnail.make(@queued_for_write[:original], 
-                                                   dimensions,
-                                                   format, 
-                                                   @whiny_thumnails)
+          @queued_for_write[name] = handler_for(name).make
         rescue PaperclipError => e
           @errors << e.message if @whiny_thumbnails
         end
@@ -248,7 +256,7 @@ module Paperclip
       else
         extension = uploaded_file.original_filename.split(".").last.strip
         if ::Mime::EXTENSION_LOOKUP.keys.include?(extension)
-          ::Mime::Type.lookup_by_extension(extension)
+          ::Mime::Type.lookup_by_extension(extension).to_s
         else
           ""
         end
