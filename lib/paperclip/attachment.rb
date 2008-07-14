@@ -59,7 +59,7 @@ module Paperclip
 
       @queued_for_write[:original]        = uploaded_file.to_tempfile
       @instance[:"#{@name}_file_name"]    = uploaded_file.original_filename.strip.gsub /[^\w\d\.\-]+/, '_'
-      @instance[:"#{@name}_content_type"] = uploaded_file.content_type.strip
+      @instance[:"#{@name}_content_type"] = content_type_from(uploaded_file)
       @instance[:"#{@name}_file_size"]    = uploaded_file.size.to_i
 
       @dirty = true
@@ -242,6 +242,18 @@ module Paperclip
       end
     end
 
+    def content_type_from(uploaded_file)
+      if content_type = uploaded_file.content_type
+        content_type.strip
+      else
+        extension = uploaded_file.original_filename.split(".").last.strip
+        if ::Mime::EXTENSION_LOOKUP.keys.include?(extension)
+          ::Mime::Type.lookup_by_extension(extension)
+        else
+          ""
+        end
+      end
+    end
   end
 end
 

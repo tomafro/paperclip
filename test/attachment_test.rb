@@ -1,4 +1,5 @@
 require 'test/helper'
+require 'action_controller/mime_type'
 
 class Dummy
   # This is a dummy class
@@ -114,6 +115,31 @@ class AttachmentTest < Test::Unit::TestCase
       assert_equal "image/png", @dummy.avatar.instance.avatar_content_type
     end
     
+  end
+  
+  context "Assigning an attachment without a content type" do
+    setup do
+      rebuild_model
+      
+      @not_file = mock
+      @not_file.stubs(:nil?).returns(false)
+      @not_file.expects(:to_tempfile).returns(self)
+      @not_file.expects(:original_filename).times(2).returns("filename.xml\r\n")
+      @not_file.expects(:content_type).returns(nil)
+      @not_file.expects(:size).returns(10)
+      
+      @dummy = Dummy.new
+      @attachment = @dummy.avatar
+      @attachment.expects(:valid_assignment?).with(@not_file).returns(true)
+      @attachment.expects(:queue_existing_for_delete)
+      @attachment.expects(:post_process)
+      @attachment.expects(:validate)
+      @dummy.avatar = @not_file
+    end
+
+    should "guess content type using file extension" do
+      assert_equal "application/xml", @dummy.avatar.instance.avatar_content_type
+    end
   end
 
   context "Attachment with strange letters" do
