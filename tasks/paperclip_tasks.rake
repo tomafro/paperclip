@@ -42,6 +42,7 @@ namespace :paperclip do
     task :thumbnails => :environment do
       for_all_attachments do |instance, name|
         instance.send(name).reprocess!
+        instance.save
       end
     end
 
