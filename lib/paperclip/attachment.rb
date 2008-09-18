@@ -166,7 +166,7 @@ module Paperclip
     def reprocess!
       new_original = Tempfile.new("paperclip-reprocess")
       if old_original = to_file(:original)
-        new_original.write( old_original.read )
+        new_original.write( old_original.respond_to?(:get) ? old_original.get : old_original.read )
         new_original.rewind
 
         @queued_for_write = { :original => new_original }
