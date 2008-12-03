@@ -134,6 +134,14 @@ module Paperclip
       end
       alias_method :to_io, :to_file
 
+      def to_tempfile style = default_style
+        tempfile = Tempfile.new("to-tempfile")
+        file = to_file(style)
+        tempfile.write( file.respond_to?(:get) ? file.get : file.read )
+        tempfile.rewind
+        tempfile
+      end
+
       def flush_writes #:nodoc:
         @queued_for_write.each do |style, file|
           begin

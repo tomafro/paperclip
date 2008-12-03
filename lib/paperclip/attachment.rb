@@ -129,6 +129,10 @@ module Paperclip
     def original_content_type
       instance[:"#{@name}_content_type"]
     end
+    
+    def content_type
+      original_content_type
+    end
 
     # A hash of procs that are run during the interpolation of a path or url.
     # A variable of the format :name will be replaced with the return value of
