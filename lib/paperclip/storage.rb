@@ -100,7 +100,7 @@ module Paperclip
           @url                = ":s3_url"
         end
         base.class.interpolations[:s3_url] = lambda do |attachment, style|
-          "https://s3.amazonaws.com/#{attachment.bucket_name}/#{attachment.path(style).gsub(%r{^/}, "")}"
+          "http://s3.amazonaws.com/#{attachment.bucket_name}/#{attachment.path(style).gsub(%r{^/}, "")}"
         end
       end
 
