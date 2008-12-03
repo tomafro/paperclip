@@ -97,6 +97,7 @@ module Paperclip
           @s3_credentials     = parse_credentials(@options[:s3_credentials])
           @s3_options         = @options[:s3_options] || {}
           @s3_permissions     = @options[:s3_permissions] || 'public-read'
+          @s3_bucket_permissions = @options[:s3_bucket_permissions] || 'private'
           @url                = ":s3_url"
         end
         base.class.interpolations[:s3_url] = lambda do |attachment, style|
@@ -111,7 +112,7 @@ module Paperclip
       end
 
       def s3_bucket
-        @s3_bucket ||= s3.bucket(@bucket, true, @s3_permissions)
+        @s3_bucket ||= s3.bucket(@bucket, true, @s3_bucket_permissions)
       end
 
       def bucket_name
