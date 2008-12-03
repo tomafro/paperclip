@@ -139,7 +139,7 @@ module Paperclip
           begin
             key = s3_bucket.key(path(style))
             key.data = file
-            key.put(nil, @s3_permissions)
+            key.put(nil, @s3_permissions, @options[:s3_headers] || {})
           rescue RightAws::AwsError => e
             raise
           end

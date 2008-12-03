@@ -251,7 +251,7 @@ module Paperclip
     end
 
     def content_type_from(uploaded_file)
-      if content_type = uploaded_file.content_type
+      if uploaded_file.respond_to?(:content_type) && content_type = uploaded_file.content_type
         content_type.strip
       else
         extension = uploaded_file.original_filename.split(".").last.strip
