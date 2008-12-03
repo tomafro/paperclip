@@ -59,7 +59,7 @@ module Paperclip
       @queued_for_write[:original]        = uploaded_file.to_tempfile
       @instance[:"#{@name}_file_name"]    = uploaded_file.original_filename.strip.gsub /[^\w\d\.\-]+/, '_'
       @instance[:"#{@name}_content_type"] = content_type_from(uploaded_file)
-      @instance[:"#{@name}_file_size"]    = uploaded_file.size.to_i
+      @instance[:"#{@name}_file_size"]    = @queued_for_write[:original].size
 
       @dirty = true
 
